@@ -1,0 +1,28 @@
+Migrar este proyecto a una version mas nueva del framework como .net 10, luego:
+1- Crear carpeta y clase Dto
+2- Crear carpeta e interfaz para repositorio y servicio, estas deben tener el contrato que se condicen con los metodos del controlador.
+3- Instalar AutoMapper
+4- En la raiz del proyecto crear archivo y clase 
+MappingConfiguration {
+ public static MapperConfiguration RegisterMaps(){
+	var mappingConfig = new MapperConfiguration(config => 
+		{
+			config.CreateMap<ArticuloDto, Articulo>();
+			config.CreateMap<Articulo, ArticuloDto>();
+		});
+		return mappingConfig;
+ }
+}
+(este codigo puede haber quedado obsoleto para .net 10. Buscar implementacion correcta)
+5- Agregar en Program 
+IMapper mapper = MappingConfig.RegisterMaps().CreateMapper();
+builder.Services.AddSingleton(mapper);
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+(probablemente solo la ultima linea sea necesaria para .net 10)
+6- Agregar clase repositorio y servicio e implementar interfaz creada anteriormente
+7- Agregar servicio y repositorio en Program para inversion de dependencias.
+builder.Services.AddScoped<IArticuloServicio, ArticuloServicio>();
+builder.Services.AddScoped<IArticuloRepositorio, ArticuloRepositorio>();
+8- Actualizar controlador para que use IArticuloServicio y el ArticuloServicio para que use IArticuloRepositorio.
+Defensa oral del trabajo practico 2 seran los dias 27 y 29 de octubre (alumnos presenciales).
+
