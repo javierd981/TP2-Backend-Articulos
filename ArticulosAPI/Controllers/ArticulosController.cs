@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ArticulosAPI.Data;
-using ArticulosAPI.Modelos;
+﻿using Microsoft.AspNetCore.Mvc;
+using ArticulosAPI.Dtos;
+using ArticulosAPI.Servicios.Contratos;
 
 namespace ArticulosAPI.Controllers
 {
@@ -14,95 +8,77 @@ namespace ArticulosAPI.Controllers
     [ApiController]
     public class ArticulosController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IArticuloServicio _articuloServicio;
 
-        public ArticulosController(ApplicationDbContext context)
+        // Inyección de dependencias a través del constructor
+        public ArticulosController(IArticuloServicio articuloServicio)
         {
-            _context = context;
+            _articuloServicio = articuloServicio;
         }
 
         // GET: api/Articulos
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Articulo>>> GetArticulos()
+        public async Task<ActionResult<IEnumerable<ArticuloDto>>> GetArticulos()
         {
-            return await _context.Articulos.ToListAsync();
+            var articulos = await _articuloServicio.ObtenerTodosAsync();
+            return Ok(articulos);
         }
 
         // GET: api/Articulos/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Articulo>> GetArticulo(int id)
+        public async Task<ActionResult<ArticuloDto>> GetArticulo(int id)
         {
-            var articulo = await _context.Articulos.FindAsync(id);
-
+            var articulo = await _articuloServicio.ObtenerPorIdAsync(id);
             if (articulo == null)
             {
-                return NotFound();
+                return NotFound(new { mensaje = $"No se encontró el artículo con Id {id}" });
             }
 
-            return articulo;
-        }
-
-        // PUT: api/Articulos/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutArticulo(int id, Articulo articulo)
-        {
-            if (id != articulo.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(articulo).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ArticuloExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            return Ok(articulo);
         }
 
         // POST: api/Articulos
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Articulo>> PostArticulo(Articulo articulo)
+        public async Task<ActionResult<ArticuloDto>> PostArticulo([FromBody] ArticuloDto articuloDto)
         {
-            _context.Articulos.Add(articulo);
-            await _context.SaveChangesAsync();
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
-            return CreatedAtAction("GetArticulo", new { id = articulo.Id }, articulo);
+            var nuevoArticulo = await _articuloServicio.CrearAsync(articuloDto);
+            return CreatedAtAction(nameof(GetArticulo), new { id = nuevoArticulo.Id }, nuevoArticulo);
+        }
+
+        // PUT: api/Articulos/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutArticulo(int id, [FromBody] ArticuloDto articuloDto)
+        {
+            if (id != articuloDto.Id)
+            {
+                return BadRequest(new { mensaje = "El ID del parámetro no coincide con el ID del cuerpo." });
+            }
+
+            var actualizado = await _articuloServicio.ActualizarAsync(articuloDto);
+            if (!actualizado)
+            {
+                return NotFound(new { mensaje = $"No se pudo actualizar. No existe el artículo con Id {id}" });
+            }
+
+            return NoContent();
         }
 
         // DELETE: api/Articulos/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteArticulo(int id)
         {
-            var articulo = await _context.Articulos.FindAsync(id);
-            if (articulo == null)
+            var eliminado = await _articuloServicio.EliminarAsync(id);
+            if (!eliminado)
             {
-                return NotFound();
+                return NotFound(new { mensaje = $"No se pudo eliminar. No existe el artículo con Id {id}" });
             }
 
-            _context.Articulos.Remove(articulo);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool ArticuloExists(int id)
-        {
-            return _context.Articulos.Any(e => e.Id == id);
         }
     }
 }

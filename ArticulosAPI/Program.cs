@@ -1,5 +1,10 @@
+using ArticulosAPI;
 using ArticulosAPI.Data;
 using Microsoft.EntityFrameworkCore;
+using ArticulosAPI.Repositorios;
+using ArticulosAPI.Repositorios.Contratos;
+using ArticulosAPI.Servicios;
+using ArticulosAPI.Servicios.Contratos;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +17,16 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+
+// Inversión de dependencias (Punto 7)
+builder.Services.AddScoped<IArticuloRepositorio, ArticuloRepositorio>();
+builder.Services.AddScoped<IArticuloServicio, ArticuloServicio>();
+
+// Registrar AutoMapper escaneando el ensamblado actual
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<MappingConfiguration>();
 });
 
 var app = builder.Build();
